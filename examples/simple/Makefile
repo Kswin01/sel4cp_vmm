@@ -27,22 +27,22 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-# ifndef TOOLCHAIN
-# 	# Get whether the common toolchain triples exist
-# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-# 	# Then check if they are defined and select the appropriate one
-# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-# 		TOOLCHAIN := aarch64-linux-gnu
-# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-# 		TOOLCHAIN := aarch64-unknown-linux-gnu
-# 	else
-# 		$(error "Could not find an AArch64 cross-compiler")
-# 	endif
-# endif
+ifndef TOOLCHAIN
+	# Get whether the common toolchain triples exist
+	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+	# Then check if they are defined and select the appropriate one
+	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+		TOOLCHAIN := aarch64-linux-gnu
+	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+		TOOLCHAIN := aarch64-unknown-linux-gnu
+	else
+		$(error "Could not find an AArch64 cross-compiler")
+	endif
+endif
 
-CC := clang
-LD := ld.lld
+CC := $(TOOLCHAIN)-gcc
+LD := $(TOOLCHAIN)-ld
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -91,8 +91,7 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-none-elf
-
+		  
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
@@ -121,7 +120,6 @@ $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-target aarch64-none-elf \
 					$< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
